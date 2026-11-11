@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星尘观测站 | Stellar Observatory</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg-primary: #0B1026;
+    --bg-secondary: #111838;
+    --accent-blue: #4FC3F7;
+    --accent-purple: #9C27B0;
+    --accent-orange: #FF9800;
+    --text-white: #FFFFFF;
+    --text-gray: #B0B8D1;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-border: rgba(255, 255, 255, 0.1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-white);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* 星空背景 */
+  #starfield {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* 导航栏 */
+  .navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 16px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(11, 16, 38, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: all 0.3s ease;
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-gray);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.3s;
+    cursor: pointer;
+  }
+
+  .nav-links a:hover,
+  .nav-links a.active {
+    color: var(--accent-blue);
+  }
+
+  .mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  /* 主内容区 */
+  .main-content {
+    position: relative;
+    z-index: 1;
+    padding-top: 70px;
+  }
+
+  .page {
+    display: none;
+    min-height: 100vh;
+    animation: fadeIn 0.5s ease;
+  }
+
+  .page.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 首页 Hero */
+  .hero {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    background: 
+      linear-gradient(180deg, rgba(11,16,38,0.3) 0%, rgba(11,16,38,0.95) 100%),
+      url('https://images-assets.nasa.gov/image/STSCI-H-p1851a-6149x5736/STSCI-H-p1851a-6149x5736~medium.jpg') center/cover no-repeat;
+  }
+
+  .hero-content {
+    max-width: 800px;
+    padding: 0 24px;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 30px rgba(79, 195, 247, 0.3);
+  }
+
+  .hero .subtitle {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--text-gray);
+    margin-bottom: 40px;
+  }
+
+  .hero-tagline {
+    font-size: 18px;
+    color: var(--accent-blue);
+    font-style: italic;
+    margin-top: 20px;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-gray);
+    font-size: 14px;
+    animation: bounce 2s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(10px); }
+  }
+
+  /* 通用区块 */
+  .section {
+    padding: 80px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .section-desc {
+    text-align: center;
+    color: var(--text-gray);
+    margin-bottom: 50px;
+    font-size: 16px;
+  }
+
+  /* 导航卡片 */
+  .nav-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .nav-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 32px 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+  }
+
+  .nav-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-blue);
+    box-shadow: 0 10px 40px rgba(79, 195, 247, 0.15);
+  }
+
+  .nav-card .icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .nav-card h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .nav-card p {
+    color: var(--text-gray);
+    font-size: 14px;
+  }
+
+  .nav-card.blue:hover { border-color: var(--accent-blue); }
+  .nav-card.purple:hover { border-color: var(--accent-purple); }
+  .nav-card.orange:hover { border-color: var(--accent-orange); }
+
+  /* 最新更新 */
+  .updates-list {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .update-item {
+    display: flex;
+    gap: 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .update-date {
+    flex-shrink: 0;
+    color: var(--accent-blue);
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 80px;
+  }
+
+  .update-content h4 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .update-content p {
+    color: var(--text-gray);
+    font-size: 14px;
+  }
+
+  /* 项目简介 */
+  .intro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+
+  .intro-text h3 {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+
+  .intro-text p {
+    color: var(--text-gray);
+    margin-bottom: 16px;
+  }
+
+  .intro-image {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+  }
+
+  .intro-image img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* 文章分类标签 */
+  .category-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 10px 24px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 30px;
+    color: var(--text-gray);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+  }
+
+  .tab-btn:hover,
+  .tab-btn.active {
+    background: rgba(79, 195, 247, 0.15);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+  }
+
+  /* 文章卡片网格 */
+  .articles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+  }
+
+  .article-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+
+  .article-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    border-color: var(--accent-blue);
+  }
+
+  .article-cover {
+    height: 180px;
+    overflow: hidden;
+  }
+
+  .article-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+  }
+
+  .article-card:hover .article-cover img {
+    transform: scale(1.05);
+  }
+
+  .article-body {
+    padding: 20px;
+  }
+
+  .article-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(79, 195, 247, 0.15);
+    color: var(--accent-blue);
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .article-body h3 {
+    font-size: 17px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .article-body p {
+    color: var(--text-gray);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* 研究页面 */
+  .research-section {
+    margin-bottom: 70px;
+  }
+
+  .research-section h2 {
+    font-size: 26px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .research-section h2::before {
+    content: '';
+    width: 4px;
+    height: 24px;
+    background: linear-gradient(180deg, var(--accent-blue), var(--accent-purple));
+    border-radius: 2px;
+  }
+
+  /* 观测日志时间线 */
+  .timeline {
+    position: relative;
+    padding-left: 30px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent-blue), var(--accent-purple));
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 24px;
+    width: 12px;
+    height: 12px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    border: 3px solid var(--bg-primary);
+  }
+
+  .timeline-date {
+    color: var(--accent-blue);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .timeline-item h4 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .timeline-item p {
+    color: var(--text-gray);
+    font-size: 14px;
+  }
+
+  /* 研究报告卡片 */
+  .report-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+
+  .report-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s;
+  }
+
+  .report-card:hover {
+    border-color: var(--accent-purple);
+    background: rgba(156, 39, 176, 0.05);
+  }
+
+  .report-card .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(156, 39, 176, 0.2);
+    color: #CE93D8;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .report-card h4 {
+    font-size: 17px;
+    margin-bottom: 8px;
+  }
+
+  .report-card p {
+    color: var(--text-gray);
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .report-card .read-more {
+    color: var(--accent-purple);
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  /* 数据可视化 */
+  .chart-container {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .chart-container h4 {
+    margin-bottom: 16px;
+    font-size: 16px;
+  }
+
+  .chart-placeholder {
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    color: var(--text-gray);
+    font-size: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 简易散点图模拟 */
+  .scatter-chart {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .scatter-dot {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.8;
+  }
+
+  /* 读书笔记 */
+  .book-notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .book-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .book-card h4 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .book-card .author {
+    color: var(--text-gray);
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .book-card .rating {
+    color: var(--accent-orange);
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+  .book-card .note {
+    color: var(--text-gray);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  /* 资源页面 */
+  .resource-category {
+    margin-bottom: 60px;
+  }
+
+  .resource-category h2 {
+    font-size: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .resource-category h2 .icon {
+    font-size: 28px;
+  }
+
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .resource-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s;
+  }
+
+  .resource-card:hover {
+    border-color: var(--accent-orange);
+    transform: translateY(-2px);
+  }
+
+  .resource-card h4 {
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+
+  .resource-card .meta {
+    color: var(--accent-orange);
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .resource-card p {
+    color: var(--text-gray);
+    font-size: 13px;
+  }
+
+  /* 望远镜指南 */
+  .telescope-guide {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 30px;
+  }
+
+  .tier {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .tier:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .tier h4 {
+    color: var(--accent-orange);
+    margin-bottom: 8px;
+  }
+
+  .tier ul {
+    list-style: none;
+    color: var(--text-gray);
+    font-size: 14px;
+  }
+
+  .tier li {
+    padding: 4px 0;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .tier li::before {
+    content: '✦';
+    position: absolute;
+    left: 0;
+    color: var(--accent-orange);
+  }
+
+  /* 页脚 */
+  .footer {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-gray);
+    font-size: 13px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 响应式 */
+  @media (max-width: 768px) {
+    .navbar { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .nav-links.mobile-open {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: rgba(11, 16, 38, 0.95);
+      padding: 20px;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .mobile-menu-btn { display: block; }
+    
+    .section { padding: 50px 20px; }
+    .nav-cards { grid-template-columns: 1fr; }
+    .intro-grid { grid-template-columns: 1fr; }
+    .section-title { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 星空粒子背景 -->
+<canvas id="starfield"></canvas>
+
+<!-- 导航栏 -->
+<nav class="navbar">
+  <div class="logo">✦ 星尘观测站</div>
+  <ul class="nav-links" id="navLinks">
+    <li><a class="nav-link active" data-page="home">首页</a></li>
+    <li><a class="nav-link" data-page="articles">科普文章</a></li>
+    <li><a class="nav-link" data-page="research">个人研究</a></li>
+    <li><a class="nav-link" data-page="resources">资源推荐</a></li>
+  </ul>
+  <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+</nav>
+
+<!-- 主内容 -->
+<div class="main-content">
+
+  <!-- 首页 -->
+  <div class="page active" id="page-home">
+    <section class="hero">
+      <div class="hero-content">
+        <h1>探索宇宙的边界</h1>
+        <p class="subtitle">记录天文观测 · 分享科普知识 · 展现研究热情</p>
+        <p class="hero-tagline">"我们都是星尘的产物，仰望星空便是回望故乡"</p>
+      </div>
+      <div class="scroll-hint">↓ 向下探索</div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">探索宇宙的入口</h2>
+      <p class="section-desc">从科普知识到深度研究，从入门资源到观测记录</p>
+      <div class="nav-cards">
+        <div class="nav-card blue" onclick="goToPage('articles')">
+          <div class="icon">📚</div>
+          <h3>科普文章</h3>
+          <p>太阳系漫游 · 恒星一生 · 星系宇宙 · 未解之谜</p>
+        </div>
+        <div class="nav-card purple" onclick="goToPage('research')">
+          <div class="icon">🔬</div>
+          <h3>个人研究</h3>
+          <p>观测日志 · 研究报告 · 数据可视化 · 读书笔记</p>
+        </div>
+        <div class="nav-card orange" onclick="goToPage('resources')">
+          <div class="icon">📖</div>
+          <h3>资源推荐</h3>
+          <p>入门书籍 · 纪录片 · 望远镜选购指南</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="background: rgba(0,0,0,0.2);">
+      <h2 class="section-title">最新更新</h2>
+      <p class="section-desc">记录每一次与星空的相遇</p>
+      <div class="updates-list">
+        <div class="update-item">
+          <div class="update-date">2026.11.05</div>
+          <div class="update-content">
+            <h4>完成系外行星探测方法研究报告</h4>
+            <p>整理了凌日法、径向速度法、直接成像法等五种主流探测技术的原理与最新进展</p>
+          </div>
+        </div>
+        <div class="update-item">
+          <div class="update-date">2026.10.28</div>
+          <div class="update-content">
+            <h4>猎户座大星云观测记录</h4>
+            <p>使用8寸牛顿反射镜成功观测M42，记录星云纹理与四合星区域细节</p>
+          </div>
+        </div>
+        <div class="update-item">
+          <div class="update-date">2026.10.15</div>
+          <div class="update-content">
+            <h4>新增恒星演化数据可视化</h4>
+            <p>用Python绘制了赫罗图与恒星质量-寿命关系曲线</p>
+          </div>
+        </div>
+        <div class="update-item">
+          <div class="update-date">2026.09.20</div>
+          <div class="update-content">
+            <h4>《时间简史》读书笔记更新</h4>
+            <p>完成黑洞热力学与霍金辐射章节的深度阅读笔记</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="intro-grid">
+        <div class="intro-text">
+          <h3>关于这个项目</h3>
+          <p>这是一个由天文爱好者独立运营的科普与研究记录平台。我相信宇宙的奥秘值得被更多人看见，也希望用自己的探索历程感染同样热爱星空的同龄人。</p>
+          <p>从入门级的天文科普，到专业级的观测记录与数据分析，这里记录了我在天文学道路上的每一步成长。</p>
+          <p>如果你是大学招生官，希望这个网站能让你看到我对天体物理的真诚热爱与持续投入；如果你是同好，欢迎一起交流探讨。</p>
+        </div>
+        <div class="intro-image">
+          <img src="https://images-assets.nasa.gov/image/PIA12068/PIA12068~medium.jpg" alt="宇宙深空" loading="lazy">
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 科普文章页 -->
+  <div class="page" id="page-articles">
+    <section class="section">
+      <h2 class="section-title">科普文章</h2>
+      <p class="section-desc">用通俗的语言，讲好宇宙的故事</p>
+      
+      <div class="category-tabs">
+        <button class="tab-btn active" data-cat="all">全部</button>
+        <button class="tab-btn" data-cat="solar">太阳系漫游</button>
+        <button class="tab-btn" data-cat="stars">恒星一生</button>
+        <button class="tab-btn" data-cat="galaxy">星系宇宙</button>
+        <button class="tab-btn" data-cat="mystery">未解之谜</button>
+      </div>
+
+      <div class="articles-grid" id="articlesGrid">
+        <!-- 太阳系 -->
+        <div class="article-card" data-cat="solar">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/PIA03174/PIA03174~medium.jpg" alt="火星" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">太阳系漫游</span>
+            <h3>红色星球的秘密：火星地貌全解析</h3>
+            <p>从奥林匹斯山到水手峡谷，探秘太阳系最壮观的行星地貌，以及人类探测火星的历程与未来。</p>
+          </div>
+        </div>
+
+        <div class="article-card" data-cat="solar">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/PIA01252/PIA01252~medium.jpg" alt="木星" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">太阳系漫游</span>
+            <h3>木星：太阳系的巨人守护者</h3>
+            <p>气态巨行星的结构之谜，大红斑的百年风暴，以及木星如何用引力保护内太阳系行星。</p>
+          </div>
+        </div>
+
+        <div class="article-card" data-cat="solar">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/PIA17202/PIA17202~medium.jpg" alt="土星" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">太阳系漫游</span>
+            <h3>土星环：宇宙中最美丽的项链</h3>
+            <p>土星环由什么构成？卡西尼号的惊人发现，以及光环系统的形成与消亡之谜。</p>
+          </div>
+        </div>
+
+        <!-- 恒星 -->
+        <div class="article-card" data-cat="stars">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/GS_20240912_pr24074a_001/GS_20240912_pr24074a_001~medium.jpg" alt="恒星形成" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">恒星一生</span>
+            <h3>恒星是怎样诞生的？</h3>
+            <p>从分子云到原恒星，详解恒星形成的物理过程，以及为什么说"我们都是星尘"。</p>
+          </div>
+        </div>
+
+        <div class="article-card" data-cat="stars">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/STSCI-H-p1851a-6149x5736/STSCI-H-p1851a-6149x5736~medium.jpg" alt="超新星" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">恒星一生</span>
+            <h3>恒星的终章：白矮星、中子星与黑洞</h3>
+            <p>不同质量恒星的不同结局，超新星爆发的壮丽瞬间，以及致密天体的奇异物理。</p>
+          </div>
+        </div>
+
+        <!-- 星系 -->
+        <div class="article-card" data-cat="galaxy">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/STSCI-2017-22-4222x4222/STSCI-2017-22-4222x4222~medium.jpg" alt="银河系" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">星系宇宙</span>
+            <h3>我们的银河系：千亿颗恒星的家园</h3>
+            <p>银河系的结构、旋臂、中心黑洞，以及人类如何从内部认识自己的星系。</p>
+          </div>
+        </div>
+
+        <div class="article-card" data-cat="galaxy">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/PIA04205/PIA04205~medium.jpg" alt="仙女座星系" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">星系宇宙</span>
+            <h3>仙女座星系：40亿年后的相遇</h3>
+            <p>距离银河系最近的大型星系，两大星系碰撞的未来，以及夜空中肉眼可见的最远天体。</p>
+          </div>
+        </div>
+
+        <!-- 未解之谜 -->
+        <div class="article-card" data-cat="mystery">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/PIA06236/PIA06236~medium.jpg" alt="暗物质" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">未解之谜</span>
+            <h3>暗物质：看不见的宇宙主角</h3>
+            <p>占宇宙27%的神秘存在，我们如何证明它的存在？它又究竟是什么？</p>
+          </div>
+        </div>
+
+        <div class="article-card" data-cat="mystery">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/GS_20240801_pr24059a_001/GS_20240801_pr24059a_001~medium.jpg" alt="黑洞" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">未解之谜</span>
+            <h3>黑洞信息悖论：物理学的终极难题</h3>
+            <p>进入黑洞的信息去了哪里？霍金辐射与量子力学的冲突，以及物理学家的各种猜想。</p>
+          </div>
+        </div>
+
+        <div class="article-card" data-cat="mystery">
+          <div class="article-cover">
+            <img src="https://images-assets.nasa.gov/image/PIA16874/PIA16874~medium.jpg" alt="费米悖论" loading="lazy">
+          </div>
+          <div class="article-body">
+            <span class="article-tag">未解之谜</span>
+            <h3>费米悖论：外星人都去哪儿了？</h3>
+            <p>宇宙如此浩瀚，为什么我们还没找到外星文明？十大假说带你深入思考。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 个人研究页 -->
+  <div class="page" id="page-research">
+    <section class="section">
+      <h2 class="section-title">个人研究</h2>
+      <p class="section-desc">记录探索路上的每一步深入思考</p>
+
+      <!-- 观测日志 -->
+      <div class="research-section">
+        <h2>天文观测日志</h2>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-date">2026.10.28 · 晴</div>
+            <h4>猎户座大星云 M42 观测</h4>
+            <p>设备：8寸牛顿反射镜 + 25mm目镜。地点：城郊观测点。首次清晰分辨出四合星梯形结构，星云呈现淡绿色云雾状，西侧纹理可见。观测时长约1.5小时，记录了视宁度变化对细节分辨的影响。</p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-date">2026.10.03 · 晴</div>
+            <h4>木星与伽利略卫星观测</h4>
+            <p>设备：8寸牛顿反射镜 + 10mm目镜。木星两条云带清晰可见，大红斑因自转未出现在视面。四颗伽利略卫星排列整齐，观测到木卫二凌木前的位置变化。</p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-date">2026.09.15 · 良</div>
+            <h4>英仙座流星雨收尾观测</h4>
+            <p>设备：双筒望远镜 + 肉眼观测。两小时内记录到17颗流星，其中3颗亮度超过-1等。峰值已过，但仍有可观流量。同步记录了流星出现的方位与余迹持续时间。</p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-date">2026.08.12 · 晴</div>
+            <h4>土星观测记录</h4>
+            <p>设备：8寸牛顿反射镜 + 巴洛镜2x。土星环卡西尼缝隐约可见，环面倾角极佳。土卫六泰坦清晰可见，呈橘红色点状。本次观测重点练习了精确调焦与大气扰动下的观测技巧。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 专题研究报告 -->
+      <div class="research-section">
+        <h2>专题研究报告</h2>
+        <div class="report-cards">
+          <div class="report-card">
+            <span class="badge">系外行星</span>
+            <h4>系外行星探测方法比较研究</h4>
+            <p>系统梳理凌日法、径向速度法、微引力透镜法、直接成像法、天体测量法五种主流探测技术的原理、精度、适用范围与代表性成果。</p>
+            <a href="#" class="read-more">阅读全文 →</a>
+          </div>
+          <div class="report-card">
+            <span class="badge">黑洞物理</span>
+            <h4>事件视界望远镜与黑洞成像原理</h4>
+            <p>从M87到银河系中心人马座A*，解析甚长基线干涉测量技术如何实现"给黑洞拍照"。</p>
+            <a href="#" class="read-more">阅读全文 →</a>
+          </div>
+          <div class="report-card">
+            <span class="badge">恒星演化</span>
+            <h4>不同质量恒星的演化路径分析</h4>
+            <p>基于赫罗图构建0.5倍太阳质量到20倍太阳质量恒星的演化轨迹，对比终结产物差异。</p>
+            <a href="#" class="read-more">阅读全文 →</a>
+          </div>
+          <div class="report-card">
+            <span class="badge">宇宙学</span>
+            <h4>哈勃常数争议与宇宙膨胀速率</h4>
+            <p>探讨不同测量方法得到的哈勃常数值差异，分析系统误差来源与可能的新物理解释。</p>
+            <a href="#" class="read-more">阅读全文 →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 数据可视化 -->
+      <div class="research-section">
+        <h2>数据可视化项目</h2>
+        <div class="chart-container">
+          <h4>恒星温度-颜色关系散点图（赫罗图简化版）</h4>
+          <div class="chart-placeholder">
+            <div class="scatter-chart" id="scatterChart"></div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <h4>太阳系行星质量对比（相对地球质量倍数）</h4>
+          <div class="chart-placeholder" id="barChart" style="padding: 20px;">
+            <!-- 用CSS绘制简易柱状图 -->
+            <div style="display:flex;align-items:flex-end;height:220px;gap:12px;width:100%;">
+              <div style="flex:1;text-align:center;">
+                <div style="height:4px;background:#4FC3F7;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">水星</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:8px;background:#4FC3F7;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">火星</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:12px;background:#4FC3F7;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">金星</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:14px;background:#4FC3F7;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">地球</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:40px;background:#9C27B0;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">海王星</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:48px;background:#9C27B0;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">天王星</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:130px;background:#FF9800;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">土星</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="height:220px;background:#FF9800;width:100%;margin-bottom:8px;"></div>
+                <div style="font-size:11px;color:#B0B8D1;">木星</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 读书观影笔记 -->
+      <div class="research-section">
+        <h2>读书观影笔记</h2>
+        <div class="book-notes">
+          <div class="book-card">
+            <h4>《时间简史》</h4>
+            <div class="author">史蒂芬·霍金</div>
+            <div class="rating">★★★★★</div>
+            <div class="note">"从大爆炸到黑洞，霍金用最简洁的语言勾勒出宇宙的全貌。黑洞热力学章节颠覆了我对'空'的认知。"</div>
+          </div>
+          <div class="book-card">
+            <h4>《宇宙》</h4>
+            <div class="author">卡尔·萨根</div>
+            <div class="rating">★★★★★</div>
+            <div class="note">"科普写作的巅峰之作。萨根不仅传递知识，更传递一种谦卑而宏大的宇宙观。"</div>
+          </div>
+          <div class="book-card">
+            <h4>《星际穿越》</h4>
+            <div class="author">纪录片 / 电影</div>
+            <div class="rating">★★★★☆</div>
+            <div class="note">"基普·索恩担任科学顾问，黑洞卡冈图雅的视觉呈现是迄今为止最准确的电影模拟。"</div>
+          </div>
+          <div class="book-card">
+            <h4>《宇宙时空之旅》</h4>
+            <div class="author">纪录片 / 尼尔·泰森</div>
+            <div class="rating">★★★★★</div>
+            <div class="note">"萨根原版的精神续作。视觉效果震撼，科学史观的传递比知识本身更重要。"</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 资源推荐页 -->
+  <div class="page" id="page-resources">
+    <section class="section">
+      <h2 class="section-title">资源推荐</h2>
+      <p class="section-desc">天文入门路上的优质指南</p>
+
+      <!-- 入门书籍 -->
+      <div class="resource-category">
+        <h2><span class="icon">📚</span> 入门书籍推荐</h2>
+        <div class="resource-grid">
+          <div class="resource-card">
+            <h4>《夜观星空》</h4>
+            <div class="meta">特伦斯·迪金森 · 观测入门</div>
+            <p>天文观测实践圣经，从器材选择到观测技巧全覆盖，配有精美星图，新手必备。</p>
+          </div>
+          <div class="resource-card">
+            <h4>《天文学入门》</h4>
+            <div class="meta">基础教材级读物</div>
+            <p>系统讲解天文学基础概念，从星座识别到天体物理，循序渐进构建知识体系。</p>
+          </div>
+          <div class="resource-card">
+            <h4>《宇宙》</h4>
+            <div class="meta">卡尔·萨根 · 科普经典</div>
+            <p>不仅是天文知识，更是科学精神与人文思考的结合，改变世界观的一本书。</p>
+          </div>
+          <div class="resource-card">
+            <h4>《果壳中的宇宙》</h4>
+            <div class="meta">史蒂芬·霍金 · 理论物理</div>
+            <p>时间简史进阶篇，弦理论、膜宇宙、时间旅行等前沿概念的通俗解读。</p>
+          </div>
+          <div class="resource-card">
+            <h4>《恒星与行星》</h4>
+            <div class="meta">DK图鉴系列</div>
+            <p>精装全彩图鉴，88星座+太阳系天体详解，适合放在手边随时查阅。</p>
+          </div>
+          <div class="resource-card">
+            <h4>《无言的宇宙》</h4>
+            <div class="meta">达纳·麦肯齐 · 数学宇宙</div>
+            <p>从数学视角看宇宙，24个公式串联起人类认识宇宙的历程。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 纪录片 -->
+      <div class="resource-category">
+        <h2><span class="icon">🎬</span> 经典纪录片</h2>
+        <div class="resource-grid">
+          <div class="resource-card">
+            <h4>宇宙时空之旅</h4>
+            <div class="meta">Cosmos: A Spacetime Odyssey</div>
+            <p>卡尔·萨根经典重制，画面震撼，叙事宏大，天文启蒙首选纪录片。</p>
+          </div>
+          <div class="resource-card">
+            <h4>行星</h4>
+            <div class="meta">The Planets · BBC</div>
+            <p>布莱恩·考克斯教授主讲，太阳系八大行星逐个详解，画面精美如电影。</p>
+          </div>
+          <div class="resource-card">
+            <h4>宇宙的奇迹</h4>
+            <div class="meta">Wonders of the Universe · BBC</div>
+            <p>从物理定律出发解释宇宙奇观，熵、时间、引力等概念的绝佳入门。</p>
+          </div>
+          <div class="resource-card">
+            <h4>黑洞启示录</h4>
+            <div class="meta">Black Hole Apocalypse · PBS</div>
+            <p>黑洞专题纪录片，采访多位顶尖物理学家，事件视界望远镜幕后故事。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 望远镜选购指南 -->
+      <div class="resource-category">
+        <h2><span class="icon">🔭</span> 望远镜选购指南</h2>
+        <div class="telescope-guide">
+          <div class="tier">
+            <h4>入门预算（500-1500元）</h4>
+            <ul>
+              <li>推荐80mm口径折射镜或114mm反射镜</li>
+              <li>优先选择赤道仪版本，便于后续学习跟星</li>
+              <li>不要迷信倍率，口径才是王道</li>
+              <li>可先入手双筒望远镜熟悉星空（7x50或10x50）</li>
+            </ul>
+          </div>
+          <div class="tier">
+            <h4>进阶预算（2000-5000元）</h4>
+            <ul>
+              <li>8寸牛顿反射镜是性价比之选，深空观测能力强</li>
+              <li>可考虑信达小黑 + EQ3D赤道仪经典组合</li>
+              <li>若注重便携性，可选6寸施密特-卡塞格林</li>
+              <li>开始配备PL目镜、巴洛镜、滤镜等配件</li>
+            </ul>
+          </div>
+          <div class="tier">
+            <h4>发烧预算（6000元以上）</h4>
+            <ul>
+              <li>可考虑8寸以上施卡或10寸道布森望远镜</li>
+              <li>GOTO自动寻星赤道仪大幅提升观测效率</li>
+              <li>入门天文摄影可搭配冷冻CCD相机</li>
+              <li>建议先有充足目视观测经验再升级摄影</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<!-- 页脚 -->
+<footer class="footer">
+  <p>✦ 星尘观测站 · 探索宇宙的每一步都值得记录</p>
+  <p style="margin-top:8px;font-size:12px;">图片来源：NASA Official Images</p>
+</footer>
+
+<script>
+// 星空粒子背景
+const canvas = document.getElementById('starfield');
+const ctx = canvas.getContext('2d');
+let stars = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+function createStars() {
+  stars = [];
+  const count = Math.floor((canvas.width * canvas.height) / 6000);
+  for (let i = 0; i < count; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 1.5 + 0.3,
+      speed: Math.random() * 0.3 + 0.05,
+      opacity: Math.random() * 0.5 + 0.3,
+      twinkle: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+function animateStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  stars.forEach(star => {
+    star.twinkle += 0.02;
+    const twinkleOpacity = star.opacity + Math.sin(star.twinkle) * 0.2;
+    
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, twinkleOpacity)})`;
+    ctx.fill();
+    
+    star.y += star.speed;
+    if (star.y > canvas.height) {
+      star.y = 0;
+      star.x = Math.random() * canvas.width;
+    }
+  });
+  
+  requestAnimationFrame(animateStars);
+}
+
+resizeCanvas();
+createStars();
+animateStars();
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  createStars();
+});
+
+// 页面切换
+function goToPage(pageName) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageName).classList.add('active');
+  
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelector(`.nav-link[data-page="${pageName}"]`).classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('navLinks').classList.remove('mobile-open');
+}
+
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    goToPage(link.dataset.page);
+  });
+});
+
+// 移动端菜单
+function toggleMenu() {
+  document.getElementById('navLinks').classList.toggle('mobile-open');
+}
+
+// 文章分类筛选
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    const cat = btn.dataset.cat;
+    document.querySelectorAll('.article-card').forEach(card => {
+      if (cat === 'all' || card.dataset.cat === cat) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+});
+
+// 生成散点图（简易赫罗图）
+function renderScatterChart() {
+  const container = document.getElementById('scatterChart');
+  const starsData = [
+    { temp: 0.85, lum: 0.0001, color: '#FF6B35', size: 4 },
+    { temp: 0.75, lum: 0.001, color: '#FF8C42', size: 5 },
+    { temp: 0.65, lum: 0.01, color: '#FFB347', size: 6 },
+    { temp: 0.55, lum: 0.1, color: '#FFD700', size: 7 },
+    { temp: 0.5, lum: 1, color: '#FFFACD', size: 8 },
+    { temp: 0.4, lum: 5, color: '#E6E6FA', size: 9 },
+    { temp: 0.3, lum: 30, color: '#B0E0E6', size: 10 },
+    { temp: 0.2, lum: 100, color: '#87CEEB', size: 11 },
+    { temp: 0.1, lum: 500, color: '#ADD8E6', size: 12 },
+    { temp: 0.9, lum: 1000, color: '#FF6347', size: 16 },
+    { temp: 0.8, lum: 3000, color: '#FF7F50', size: 18 },
+    { temp: 0.15, lum: 0.0001, color: '#B0C4DE', size: 3 },
+    { temp: 0.25, lum: 0.0002, color: '#87CEFA', size: 3 },
+    { temp: 0.35, lum: 0.0003, color: '#E0FFFF', size: 3 },
+  ];
+  
+  starsData.forEach(s => {
+    const dot = document.createElement('div');
+    dot.className = 'scatter-dot';
+    dot.style.left = (s.temp * 100) + '%';
+    dot.style.bottom = (Math.log10(s.lum + 0.0001) / 4 + 0.3) * 80 + '%';
+    dot.style.width = s.size + 'px';
+    dot.style.height = s.size + 'px';
+    dot.style.background = s.color;
+    dot.style.boxShadow = `0 0 ${s.size}px ${s.color}`;
+    container.appendChild(dot);
+  });
+}
+
+renderScatterChart();
+
+// 导航栏滚动效果
+window.addEventListener('scroll', () => {
+  const navbar = document.querySelector('.navbar');
+  if (window.scrollY > 50) {
+    navbar.style.background = 'rgba(11, 16, 38, 0.95)';
+    navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+  } else {
+    navbar.style.background = 'rgba(11, 16, 38, 0.85)';
+    navbar.style.boxShadow = 'none';
+  }
+});
+
+// 图片懒加载原生支持
+if ('loading' in HTMLImageElement.prototype) {
+  const images = document.querySelectorAll('img[loading="lazy"]');
+  images.forEach(img => {
+    img.src = img.src;
+  });
+}
+</script>
+
+</body>
+</html>
